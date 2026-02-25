@@ -1,0 +1,82 @@
+============================================================
+PERSONA 1 — NÚCLEO DE RED (Claudio)
+============================================================
+
+Responsable de:
+
+- socket()
+- bind()
+- listen()
+- accept()
+- poll()
+- recv()
+- send()
+- Manejo de desconexiones
+- Estructura base del Server
+
+Objetivo:
+
+Tener un servidor que:
+
+- Acepte múltiples clientes
+- Reciba texto
+- Lo imprima en consola
+- Detecte desconexiones
+- No se bloquee
+
+⚠️ Sin lógica IRC todavía.
+
+Esto es la base del proyecto.
+
+
+============================================================
+PERSONA 2 — MODELO DE DATOS
+============================================================
+
+Responsable de:
+
+- Clase Client
+- Clase Channel
+
+Gestión de:
+
+- Lista de clientes
+- Lista de canales
+
+Métodos tipo:
+
+- addClient()
+- removeClient()
+- addUserToChannel()
+- removeUserFromChannel()
+
+Aquí NO hay sockets.
+Solo lógica y estructuras.
+
+Esto reduce conflictos muchísimo.
+
+
+============================================================
+PERSONA 3 — PARSING + COMANDOS
+============================================================
+
+Responsable de:
+
+- Parser de mensajes IRC
+
+Separar:
+
+- Comando
+- Parámetros
+- Trailing message
+
+Dispatcher de comandos:
+
+- PASS
+- NICK
+- USER
+- JOIN
+- PRIVMSG
+- QUIT
+
+Esta persona trabajará usando las clases que cree la Persona 2.
