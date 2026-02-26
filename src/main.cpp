@@ -1,8 +1,11 @@
 #include <iostream>
 #include <cstdlib>
 #include <cctype>
+#include "Server.hpp"
 
 typedef std::string string;
+using std::cout;
+using std::endl;
 
 bool isNumber(const string &str)
 {
@@ -53,6 +56,9 @@ int main(int argc, char **argv)
     if (!checkArgs(portStr, password))
         return 1;
 
+    int port = std::atoi(portStr.c_str());
+    Server server(port);
+    server.start();
     std::cout << "Todo bien" << std::endl;
     return 0;
 }
