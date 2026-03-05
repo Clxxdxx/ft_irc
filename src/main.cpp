@@ -44,6 +44,9 @@ bool checkArgs(const string &portStr, const string &password)
 
 int main(int argc, char **argv)
 {
+    std::signal(SIGQUIT, handleSignal);
+    std::signal(SIGINT, handleSignal);
+    std::signal(SIGPIPE, SIG_IGN);
     if (argc != 3)
     {
         std::cerr << "Usage: ./ircserv <port> <password>" << std::endl;
