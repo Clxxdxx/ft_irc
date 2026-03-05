@@ -79,4 +79,11 @@ Dispatcher de comandos:
 - PRIVMSG
 - QUIT
 
+Comandos de los canales:
+
+- KICK
+- INVITE
+- TOPIC
+- MODE
+
 Esta persona trabajará usando las clases que cree la Persona 2.

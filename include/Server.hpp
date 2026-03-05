@@ -6,7 +6,7 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 14:36:56 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/04 16:26:38 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/05 12:41:43 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,12 +44,13 @@ class Server
         Server(int port);
         ~Server();
 
+        std::vector<int> getAllClients();
+        
         void start();
         void acceptClient();
         bool recvMsg(size_t &i);
         void connectionHandler();
         void sendMsgServerClosed();
-        //Hacer estas dos mañana
         void sendMsgToClient(int fd, const std::string &msg);
         void sendMsgToMany(const std::vector<int> &fds, const std::string &msg);
 };

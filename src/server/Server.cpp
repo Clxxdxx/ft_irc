@@ -6,7 +6,7 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 14:41:15 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/04 16:23:33 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/05 15:30:30 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,20 @@ Server::~Server()
     for (size_t i = 0; i < _pFds.size(); i++)
         close(_pFds[i].fd);
 }
+
+std::vector<int> Server::getAllClients()
+{
+    std::vector<int> clients;
+    
+    for (size_t i = 0; i < _pFds.size(); i++)
+    {
+        int fd = _pFds[i].fd;
+        if (fd != STDIN_FILENO && fd != _serverFd)
+            clients.push_back(fd);
+    }
+    return clients;
+}
+
 
 void Server::acceptClient()
 {
@@ -62,7 +76,7 @@ bool Server::recvMsg(size_t &i)
     if (bytes <= 0)
     {
         if (bytes == 0)
-            std::cout << "Cliente desconectado: fd " << fd << std::endl;
+            cout << "Cliente desconectado: fd " << fd << endl;
         else
            return true;
 
@@ -89,26 +103,53 @@ bool Server::recvMsg(size_t &i)
     return true;
 }
 
+
+void Server::sendMsgToClient(int fd, const std::string &msg)
+{
+    size_t totalSent = 0;
+    //Obligar que se mande todo el mensaje porque send no garantiza que se mande todo
+    while (totalSent < msg.size())
+    {
+        ssize_t bytes = send(fd, msg.c_str() + totalSent, msg.size() - totalSent, 0);
+        
+        if (bytes <= 0)
+        {
+            std::cerr << "Can't send message to " << fd << endl;
+            return ;
+        }
+        totalSent += bytes;
+    }
+    
+}
+
+void Server::sendMsgToMany(const std::vector<int> &fds, const std::string &msg)
+{
+    for (size_t i = 0; i < fds.size(); i++)
+        sendMsgToClient(fds[i], msg);
+    
+}
+
 void Server::sendMsgServerClosed()
 {
     std::string msg = "Server closed\r\n";
-    //Iterar sobre todos los fds
+    std::vector<int> clientsFds;
     for (size_t i = 0; i < _pFds.size(); i++)
     {
         int fd = _pFds[i].fd;
         //Si el fd es de un cliente mandarle el mensaje y cerrarlo
         if (fd != _serverFd && fd != STDIN_FILENO)
-        {
-            send(fd, msg.c_str(), msg.size(), 0);
-            close(fd);
-        }
+            clientsFds.push_back(fd);
     }
+
+    sendMsgToMany(clientsFds, msg);
+    
+    for (size_t i = 0; i < _pFds.size(); i++)
+        close(_pFds[i].fd);
+    
     close(_serverFd);
-    _pFds.clear();
     _clientBuffers.clear();
     
 }
-
 void Server::connectionHandler()
 {
     //Añadir el servidor al poll

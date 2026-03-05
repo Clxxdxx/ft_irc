@@ -10,7 +10,7 @@ DIRSERVER = src/server
 SERVER_NAMES = Server.cpp
 SERVER_SRCS = $(addprefix $(DIRSERVER)/, $(SERVER_NAMES))
 
-SRCS = src/main.cpp $(SERVER_SRCS)
+SRCS = src/main.cpp src/utils.cpp $(SERVER_SRCS)
 
 OBJ_DIR = objects
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
