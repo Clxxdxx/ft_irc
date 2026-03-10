@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
+/*   By: ancarret <ancarret@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/09 12:41:13 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/09 15:12:52 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/10 18:38:45 by ancarret         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,45 +15,70 @@
 
 #include <string>
 #include <vector>
-#include <iostream>
 
 typedef std::string string;
-using std::cout;
-using std::endl;
+
 class Channel
 {
 private:
-    string _name;
-    string _topic;
+    string              _name;
+    string              _topic;
+    string              _password;      // mode k
 
-    std::vector<int> _clients;
-    std::vector<int> _operators;
+    std::vector<int>    _clients;
+    std::vector<int>    _operators;
+    std::vector<int>    _inviteList;    // fds invitados (modo i)
 
-    bool _inviteOnly;
+    bool    _inviteOnly;        // mode i
+    bool    _topicRestricted;   // mode t: solo operadores pueden cambiar el topic
+    int     _userLimit;         // mode l: 0 = sin limite
 
 public:
     Channel();
     Channel(const string &name);
     ~Channel();
 
-    string getName() const;
-    void setName(const string &name);
+    // Nombre
+    string  getName() const;
+    void    setName(const string &name);
 
-    string getTopic() const;
-    void setTopic(const string &topic);
+    // Topic
+    string  getTopic() const;
+    void    setTopic(const string &topic);
 
-    std::vector<int> getClients() const;
-    std::vector<int> getOperators() const;
+    // Password (mode k)
+    string  getPassword() const;
+    void    setPassword(const string &password);
+    bool    hasPassword() const;
 
-    void addClient(int fd);
-    void removeClient(int fd);
-    bool isClient(int fd) const;
+    // Clientes
+    std::vector<int>    getClients() const;
+    void    addClient(int fd);
+    void    removeClient(int fd);
+    bool    isClient(int fd) const;
+    int     getClientCount() const;
 
-    void addOperator(int fd);
-    bool isOperator(int fd) const;
+    // Operadores (mode o)
+    std::vector<int>    getOperators() const;
+    void    addOperator(int fd);
+    void    removeOperator(int fd);
+    bool    isOperator(int fd) const;
 
-    bool isInviteOnly() const;
-    void setInviteOnly(bool value);
+    // Lista de invitados (mode i)
+    void    addInvite(int fd);
+    void    removeInvite(int fd);
+    bool    isInvited(int fd) const;
+
+    // Modos
+    bool    isInviteOnly() const;
+    void    setInviteOnly(bool value);
+
+    bool    isTopicRestricted() const;
+    void    setTopicRestricted(bool value);
+
+    int     getUserLimit() const;
+    void    setUserLimit(int limit);
+    bool    hasUserLimit() const;
 };
 
 #endif

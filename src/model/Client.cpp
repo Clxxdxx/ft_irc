@@ -3,16 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
+/*   By: ancarret <ancarret@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/09 14:39:30 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/09 14:53:13 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/10 18:38:45 by ancarret         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.hpp"
 
-Client::Client(int fd): _fd(fd)
+Client::Client(int fd): _fd(fd), _registered(false), _hasProvidedPass(false)
 {
     
 }
@@ -62,4 +62,41 @@ void Client::setNickName(const string &nickname)
 void Client::setRegistered(bool value)
 {
     _registered = value;
+}
+
+bool Client::hasProvidedPass() const
+{
+    return _hasProvidedPass;
+}
+
+void Client::setHasProvidedPass(bool value)
+{
+    _hasProvidedPass = value;
+}
+
+void Client::joinChannel(const string &channel)
+{
+    _channels.push_back(channel);
+}
+
+void Client::leaveChannel(const string &channel)
+{
+    for (size_t i = 0; i < _channels.size(); i++)
+    {
+        if (_channels[i] == channel)
+        {
+            _channels.erase(_channels.begin() + i);
+            return;
+        }
+    }
+}
+
+bool Client::isInChannel(const string &channel) const
+{
+    for (size_t i = 0; i < _channels.size(); i++)
+    {
+        if (_channels[i] == channel)
+            return true;
+    }
+    return false;
 }
