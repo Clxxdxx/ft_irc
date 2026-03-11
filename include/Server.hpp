@@ -6,7 +6,7 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 14:36:56 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/05 12:41:43 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/11 14:19:23 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,29 +27,43 @@
 
 using std::cout;
 using std::endl;
+typedef std::string string;
 
+class Client;
+class Channel;
 
 class Server
 {
     private:
         int _port;
-        int _portFd;
+        string _password;
         int _serverFd;
         int _clientFd;
         struct sockaddr_in _server_addr;
         std::vector<pollfd> _pFds;
-        std::map<int, std::string> _clientBuffers;
+        std::map<int, string> _clientBuffers;
+        std::map<int, Client> _clients;
+        std::map<std::string, Channel> _channels;
 
     public:
-        Server(int port);
+        Server(int port, const string &password);
         ~Server();
 
-        std::vector<int> getAllClients();
+        Client* getClient(int fd);
+        std::map<int, Client> &getClients();
+        
+        Channel* getChannel(const string& name);
+        std::map<string, Channel> &getChannels();
+
+        string getPassword() const;
         
         void start();
         void acceptClient();
         bool recvMsg(size_t &i);
         void connectionHandler();
+        void disconnectClient(int fd);
+        
+        void handleMessage(int fd, const string &msg);
         void sendMsgServerClosed();
         void sendMsgToClient(int fd, const std::string &msg);
         void sendMsgToMany(const std::vector<int> &fds, const std::string &msg);

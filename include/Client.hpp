@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ancarret <ancarret@student.42.fr>          +#+  +:+       +#+        */
+/*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/09 11:54:11 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/10 18:38:45 by ancarret         ###   ########.fr       */
+/*   Updated: 2026/03/11 12:04:52 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ class Client
         std::vector<string> _channels;
 
     public:
+        Client();
         Client(int fd);
         ~Client();
 

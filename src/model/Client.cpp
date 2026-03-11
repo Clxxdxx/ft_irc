@@ -3,14 +3,19 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: ancarret <ancarret@student.42.fr>          +#+  +:+       +#+        */
+/*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/09 14:39:30 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/10 18:38:45 by ancarret         ###   ########.fr       */
+/*   Updated: 2026/03/11 12:07:34 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Client.hpp"
+
+Client::Client()
+{
+    
+}
 
 Client::Client(int fd): _fd(fd), _registered(false), _hasProvidedPass(false)
 {

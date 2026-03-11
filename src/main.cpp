@@ -23,7 +23,7 @@ int main(int argc, char **argv)
         return 1;
 
     int port = std::atoi(portStr.c_str());
-    Server server(port);
+    Server server(port, password);
     server.start();
 
     return 0;

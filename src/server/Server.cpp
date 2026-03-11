@@ -6,11 +6,13 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 14:41:15 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/05 15:30:30 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/11 14:34:54 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
+#include "Client.hpp"
+#include "Channel.hpp"
 
 volatile sig_atomic_t g_serv_running = 1; 
 
@@ -20,7 +22,7 @@ void handleSignal(int signum)
     g_serv_running = 0;
 }
 
-Server::Server(int port): _port(port)
+Server::Server(int port, const string &password): _port(port), _password(password)
 {
             
 }
@@ -31,19 +33,39 @@ Server::~Server()
         close(_pFds[i].fd);
 }
 
-std::vector<int> Server::getAllClients()
+string Server::getPassword() const
 {
-    std::vector<int> clients;
-    
-    for (size_t i = 0; i < _pFds.size(); i++)
-    {
-        int fd = _pFds[i].fd;
-        if (fd != STDIN_FILENO && fd != _serverFd)
-            clients.push_back(fd);
-    }
-    return clients;
+    return _password;
 }
 
+Client* Server::getClient(int fd)
+{
+    if (_clients.find(fd) == _clients.end())
+    return NULL;
+    return &_clients[fd];
+}
+
+std::map<int, Client> &Server::getClients()
+{
+    return _clients;
+}
+
+Channel* Server::getChannel(const string& name)
+{
+    if (_channels.find(name) == _channels.end())
+    return NULL;
+    return &_channels[name];
+}
+
+std::map<string, Channel> &Server::getChannels()
+{
+    return _channels;
+}
+
+void Server::handleMessage(int fd, const string &msg)
+{
+    cout << "Mensaje del [fd " << fd << "]: " << msg << endl;
+}
 
 void Server::acceptClient()
 {
@@ -62,6 +84,9 @@ void Server::acceptClient()
         
         //Añdir el cliente al al vector de los polls
         _pFds.push_back(client_poll);
+
+        //crear el cliente
+        _clients[_clientFd] = Client(_clientFd);
         cout << "Cliente conectado: fd " << _clientFd << endl; 
     }
 }
@@ -80,9 +105,7 @@ bool Server::recvMsg(size_t &i)
         else
            return true;
 
-        close(fd);
-        _clientBuffers.erase(fd);
-        _pFds.erase(_pFds.begin() + i);
+        disconnectClient(fd);
         return false;
     }
 
@@ -96,8 +119,10 @@ bool Server::recvMsg(size_t &i)
         std::string message = _clientBuffers[fd].substr(0, pos);
         _clientBuffers[fd].erase(0, pos + 1);
 
-        //Aqui ira el usuario que ha hablado y su mensaje
-        cout << "Mensaje del [fd " << fd << "]: " << message << endl;
+        if (!message.empty() && message[message.size() - 1] == '\r')
+            message.erase(message.size() - 1);
+        //Mandar el mensaje al servidor
+        handleMessage(fd, message);
     }
 
     return true;
@@ -218,7 +243,6 @@ void Server::connectionHandler()
 
 void Server::start()
 {
-    (void)_portFd;
     //Crea un punto de comunicacion para enviar o recibir datos
     //Primer parametro, es el dominio de las ip, el segundo el tipo de protocolo
     //y el tercero elige el protocolo, 0 por defecto
@@ -265,4 +289,21 @@ void Server::start()
 
     cout << "Servidor iniciado en el puerto " << _port << endl;
     connectionHandler();
+}
+
+//Para KICK y QUIT
+void Server::disconnectClient(int fd)
+{
+    close(fd);
+    _clientBuffers.erase(fd);
+    _clients.erase(fd);
+
+    for (size_t i = 0; i < _pFds.size(); i++)
+    {
+        if (_pFds[i].fd == fd)
+        {
+            _pFds.erase(_pFds.begin() + i);
+            break;
+        }
+    }
 }
