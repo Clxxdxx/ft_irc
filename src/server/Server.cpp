@@ -6,13 +6,14 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 14:41:15 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/11 14:34:54 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/12 11:51:41 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
+#include "CommandDispatcher.hpp"
 
 volatile sig_atomic_t g_serv_running = 1; 
 
@@ -65,6 +66,9 @@ std::map<string, Channel> &Server::getChannels()
 void Server::handleMessage(int fd, const string &msg)
 {
     cout << "Mensaje del [fd " << fd << "]: " << msg << endl;
+
+    CommandDispatcher dsp;
+    dsp.executeCommand(*this, fd, msg);
 }
 
 void Server::acceptClient()

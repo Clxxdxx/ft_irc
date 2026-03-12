@@ -14,7 +14,11 @@ DIRMODEL = src/model
 MODEL_NAMES = Client.cpp Channel.cpp
 MODEL_SRCS = $(addprefix $(DIRMODEL)/, $(MODEL_NAMES))
 
-SRCS = src/main.cpp src/utils.cpp $(SERVER_SRCS) $(MODEL_SRCS)
+DIRCMDS = src/commands
+CMDS_NAMES = CommandDispatcher.cpp
+CMDS_SRCS = $(addprefix $(DIRCMDS)/, $(CMDS_NAMES))
+
+SRCS = src/main.cpp src/utils.cpp $(SERVER_SRCS) $(MODEL_SRCS) $(CMDS_SRCS)
 
 OBJ_DIR = objects
 OBJS = $(SRCS:%.cpp=$(OBJ_DIR)/%.o)
