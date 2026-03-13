@@ -6,7 +6,7 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 14:41:15 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/12 11:51:41 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/13 15:28:55 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -113,14 +113,14 @@ bool Server::recvMsg(size_t &i)
         return false;
     }
 
-    _clientBuffers[fd] += std::string(buffer, bytes);
+    _clientBuffers[fd] += string(buffer, bytes);
 
     size_t pos;
     //Añadir que busque tb el \r cuando se haga el parseo
     //EL mensaje tiene que acabar con \r\n para cambiar de linea y mover el cursor
-    while ((pos = _clientBuffers[fd].find("\n")) != std::string::npos)
+    while ((pos = _clientBuffers[fd].find("\n")) != string::npos)
     {
-        std::string message = _clientBuffers[fd].substr(0, pos);
+        string message = _clientBuffers[fd].substr(0, pos);
         _clientBuffers[fd].erase(0, pos + 1);
 
         if (!message.empty() && message[message.size() - 1] == '\r')
@@ -133,7 +133,7 @@ bool Server::recvMsg(size_t &i)
 }
 
 
-void Server::sendMsgToClient(int fd, const std::string &msg)
+void Server::sendMsgToClient(int fd, const string &msg)
 {
     size_t totalSent = 0;
     //Obligar que se mande todo el mensaje porque send no garantiza que se mande todo
@@ -147,11 +147,10 @@ void Server::sendMsgToClient(int fd, const std::string &msg)
             return ;
         }
         totalSent += bytes;
-    }
-    
+    }  
 }
 
-void Server::sendMsgToMany(const std::vector<int> &fds, const std::string &msg)
+void Server::sendMsgToMany(const std::vector<int> &fds, const string &msg)
 {
     for (size_t i = 0; i < fds.size(); i++)
         sendMsgToClient(fds[i], msg);
@@ -160,7 +159,7 @@ void Server::sendMsgToMany(const std::vector<int> &fds, const std::string &msg)
 
 void Server::sendMsgServerClosed()
 {
-    std::string msg = "Server closed\r\n";
+    string msg = "Server closed\r\n";
     std::vector<int> clientsFds;
     for (size_t i = 0; i < _pFds.size(); i++)
     {

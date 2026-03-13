@@ -6,7 +6,7 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/09 14:39:30 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/11 12:07:34 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/13 14:58:28 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,6 +102,16 @@ bool Client::isInChannel(const string &channel) const
     {
         if (_channels[i] == channel)
             return true;
+    }
+    return false;
+}
+
+bool Client::tryRegister()
+{
+    if (_hasProvidedPass && !_nickName.empty() && !_userName.empty())
+    {
+        _registered = true;    
+        return true;
     }
     return false;
 }

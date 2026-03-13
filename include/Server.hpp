@@ -6,7 +6,7 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/26 14:36:56 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/11 14:19:23 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/13 15:18:51 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,8 +65,8 @@ class Server
         
         void handleMessage(int fd, const string &msg);
         void sendMsgServerClosed();
-        void sendMsgToClient(int fd, const std::string &msg);
-        void sendMsgToMany(const std::vector<int> &fds, const std::string &msg);
+        void sendMsgToClient(int fd, const string &msg);
+        void sendMsgToMany(const std::vector<int> &fds, const string &msg);
 };
 
 void handleSignal(int signum);

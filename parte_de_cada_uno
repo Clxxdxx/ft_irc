@@ -85,5 +85,10 @@ Comandos de los canales:
 - INVITE
 - TOPIC
 - MODE
+    .i
+    .t
+    .k
+    .o
+    .l
 
 Esta persona trabajará usando las clases que cree la Persona 2.

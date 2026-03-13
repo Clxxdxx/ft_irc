@@ -6,7 +6,7 @@
 /*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/09 11:54:11 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/11 12:04:52 by clalopez         ###   ########.fr       */
+/*   Updated: 2026/03/13 14:58:34 by clalopez         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,7 @@ class Client
 
         bool    isRegistered() const;
         void    setRegistered(bool value);
+        bool    tryRegister();
 
         bool    hasProvidedPass() const;
         void    setHasProvidedPass(bool value);
