@@ -91,8 +91,11 @@ void CommandDispatcher::cmdUser(std::istringstream &ss, Server &server, int fd)
 void CommandDispatcher::cmdJoin(std::istringstream &ss, Server &server, int fd)
 {
     Client *client = server.getClient(fd);
-    if (!client)
+    if (!client || !client->isRegistered())
+    {
+        server.sendMsgToClient(fd, "451 :You have not registered\r\n");
         return;
+    }
 
     string channelName, key;
     ss >> channelName >> key;
@@ -103,31 +106,47 @@ void CommandDispatcher::cmdJoin(std::istringstream &ss, Server &server, int fd)
         return;
     }
 
-    // Los canales en IRC deben empezar por #
     if (channelName[0] != '#' && channelName[0] != '&')
-    {
-        channelName = "#" + channelName; // Auto forzar '#' si el cliente no lo pone, solo para ayudar (nc)
-    }
+        channelName = "#" + channelName;
 
     std::map<string, Channel> &channels = server.getChannels();
-    bool isNewChannel = false;
+    bool isNewChannel = (channels.find(channelName) == channels.end());
     
-    if (channels.find(channelName) == channels.end())
-    {
+    if (isNewChannel)
         channels[channelName] = Channel(channelName);
-        isNewChannel = true;
-    }
 
     Channel &channel = channels[channelName];
 
     if (channel.isClient(fd))
         return;
 
+    if (!isNewChannel)
+    {
+        if (channel.isInviteOnly() && !channel.isInvited(fd))
+        {
+            server.sendMsgToClient(fd, "473 " + client->getNickName() + " " + channelName + " :Cannot join channel (+i)\r\n");
+            return;
+        }
+        if (channel.hasPassword() && key != channel.getPassword())
+        {
+            server.sendMsgToClient(fd, "475 " + client->getNickName() + " " + channelName + " :Cannot join channel (+k)\r\n");
+            return;
+        }
+        if (channel.hasUserLimit() && channel.getClientCount() >= channel.getUserLimit())
+        {
+            server.sendMsgToClient(fd, "471 " + client->getNickName() + " " + channelName + " :Cannot join channel (+l)\r\n");
+            return;
+        }
+    }
+
     channel.addClient(fd);
     client->joinChannel(channelName);
 
     if (isNewChannel)
         channel.addOperator(fd);
+    
+    if (channel.isInvited(fd))
+        channel.removeInvite(fd);
 
     string prefix = ":" + client->getNickName() + "!" + client->getUserName() + "@localhost";
     string joinMsg = prefix + " JOIN :" + channelName + "\r\n";
@@ -145,8 +164,7 @@ void CommandDispatcher::cmdJoin(std::istringstream &ss, Server &server, int fd)
         Client *c = server.getClient(mems[i]);
         if (c)
         {
-            if (channel.isOperator(mems[i]))
-                namesList += "@";
+            if (channel.isOperator(mems[i])) namesList += "@";
             namesList += c->getNickName() + " ";
         }
     }
@@ -161,6 +179,12 @@ void CommandDispatcher::cmdPrivmsg(std::istringstream &ss, Server &server, int f
     if (!client)
         return;
 
+    if (!client->isRegistered())
+    {
+        server.sendMsgToClient(client->getFd(), "User must be authenticated\r\n");
+        return;
+    }
+    
     string target, message;
     ss >> target;
 
@@ -274,6 +298,182 @@ void CommandDispatcher::cmdQuit(std::istringstream &ss, Server &server, int fd)
     server.disconnectClient(fd);
 }
 
+void CommandDispatcher::cmdKick(std::istringstream &ss, Server &server, int fd) {
+    string channelName, targetNick, reason;
+    ss >> channelName >> targetNick;
+    std::getline(ss, reason);
+
+    Client *ref = server.getClient(fd);
+    Channel *chan = server.getChannel(channelName);
+
+    if (!chan) 
+        return server.sendMsgToClient(fd,  channelName + " :No such channel\r\n");
+    if (!chan->isClient(fd)) 
+        return server.sendMsgToClient(fd, channelName + " :You're not on that channel\r\n");
+    if (!chan->isOperator(fd)) 
+        return server.sendMsgToClient(fd, channelName + " :You're not channel operator\r\n");
+
+    int targetFd = -1;
+    std::map<int, Client> &clients = server.getClients();
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+        if (it->second.getNickName() == targetNick) {
+            targetFd = it->first;
+            break;
+        }
+    }
+
+    if (targetFd == -1 || !chan->isClient(targetFd))
+        return server.sendMsgToClient(fd, targetNick + " " + channelName + " :They aren't on that channel\r\n");
+
+    string msg = ":" + ref->getNickName() + " KICK " + channelName + " " + targetNick + " :" + (reason.empty() ? "Kicked" : reason) + "\r\n";
+    std::vector<int> members = chan->getClients();
+    for (size_t i = 0; i < members.size(); i++)
+        server.sendMsgToClient(members[i], msg);
+
+    chan->removeClient(targetFd);
+    server.getClient(targetFd)->leaveChannel(channelName);
+}
+
+void CommandDispatcher::cmdTopic(std::istringstream &ss, Server &server, int fd) {
+    string channelName, newTopic;
+    ss >> channelName;
+    std::getline(ss, newTopic);
+
+    Channel *chan = server.getChannel(channelName);
+    if (!chan) 
+        return server.sendMsgToClient(fd, "No such channel\r\n");
+    if (!chan->isClient(fd)) 
+        return server.sendMsgToClient(fd, "You're not on that channel\r\n");
+
+    if (newTopic.empty()) 
+    {
+        if (chan->getTopic().empty()) 
+            server.sendMsgToClient(fd, channelName + " :No topic is set\r\n");
+        else 
+            server.sendMsgToClient(fd, channelName + " :" + chan->getTopic() + "\r\n");
+    } 
+    else 
+    {
+        if (chan->isTopicRestricted() && !chan->isOperator(fd))
+            return server.sendMsgToClient(fd, channelName + " :You're not channel operator\r\n");
+        
+        if (newTopic[0] == ' ') 
+            newTopic.erase(0, 1);
+        if (newTopic[0] == ':') 
+            newTopic.erase(0, 1);
+        
+        chan->setTopic(newTopic);
+        string msg = ":" + server.getClient(fd)->getNickName() + " TOPIC " + channelName + " :" + newTopic + "\r\n";
+        std::vector<int> mems = chan->getClients();
+        for (size_t i = 0; i < mems.size(); i++) 
+            server.sendMsgToClient(mems[i], msg);
+    }
+}
+
+void CommandDispatcher::cmdInvite(std::istringstream &ss, Server &server, int fd) {
+    string targetNick, channelName;
+    ss >> targetNick >> channelName;
+
+    Client *inviter = server.getClient(fd);
+    Channel *chan = server.getChannel(channelName);
+
+    if (!chan) 
+        return server.sendMsgToClient(fd, channelName + " :No such channel\r\n");
+    if (!chan->isClient(fd)) 
+        return server.sendMsgToClient(fd, channelName + " :You're not on that channel\r\n");
+    if (chan->isInviteOnly() && !chan->isOperator(fd))
+        return server.sendMsgToClient(fd, channelName + " :You're not channel operator\r\n");
+
+    int targetFd = -1;
+    std::map<int, Client> &clients = server.getClients();
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) 
+    {
+        if (it->second.getNickName() == targetNick) 
+        { 
+            targetFd = it->first;
+            break; 
+        }
+    }
+
+    if (targetFd == -1) 
+        return server.sendMsgToClient(fd, targetNick + " :No such nick\r\n");
+    if (chan->isClient(targetFd)) 
+        return server.sendMsgToClient(fd, targetNick + " " + channelName + " :is already on channel\r\n");
+
+    chan->addInvite(targetFd);
+    server.sendMsgToClient(fd, inviter->getNickName() + " " + targetNick + " " + channelName + "\r\n");
+    server.sendMsgToClient(targetFd, ":" + inviter->getNickName() + " INVITE " + targetNick + " :" + channelName + "\r\n");
+}
+
+void CommandDispatcher::cmdMode(std::istringstream &ss, Server &server, int fd) {
+    string target, modes, param;
+    ss >> target >> modes;
+    
+    Channel *chan = server.getChannel(target);
+    if (!chan) 
+        return;
+    if (!chan->isOperator(fd)) 
+        return server.sendMsgToClient(fd, target + " :You're not channel operator\r\n");
+
+    bool adding = true;
+    for (size_t i = 0; i < modes.length(); i++) {
+        char c = modes[i];
+        if (c == '+') 
+        { 
+            adding = true; 
+            continue; 
+        }
+        if (c == '-') 
+        { 
+            adding = false; 
+            continue; 
+        }
+
+        if (c == 'i') 
+            chan->setInviteOnly(adding);
+        else if (c == 't') 
+            chan->setTopicRestricted(adding);
+        else if (c == 'k') 
+        {
+            ss >> param;
+            if (adding) 
+                chan->setPassword(param);
+            else 
+                chan->setPassword("");
+        }
+        else if (c == 'l')
+        {
+            if (adding) 
+            { 
+                ss >> param; 
+                chan->setUserLimit(std::atoi(param.c_str())); 
+            }
+            else 
+                chan->setUserLimit(0);
+        }
+        else if (c == 'o') {
+            ss >> param;
+            int targetFd = -1;
+            std::map<int, Client> &clients = server.getClients();
+            for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it)
+                { 
+                    if (it->second.getNickName() == param)
+                        targetFd = it->first; 
+                }
+            if (targetFd != -1) {
+                if (adding) 
+                    chan->addOperator(targetFd);
+                else 
+                    chan->removeOperator(targetFd);
+            }
+        }
+    }
+    string msg = ":" + server.getClient(fd)->getNickName() + " MODE " + target + " " + modes + "\r\n";
+    std::vector<int> mems = chan->getClients();
+    for (size_t i = 0; i < mems.size(); i++) 
+        server.sendMsgToClient(mems[i], msg);
+}
+
 void CommandDispatcher::executeCommand(Server &server, int fd, const string &message)
 {
     std::istringstream ss(message);
@@ -293,6 +493,14 @@ void CommandDispatcher::executeCommand(Server &server, int fd, const string &mes
         cmdPrivmsg(ss, server, fd);
     else if (command == "QUIT")
         cmdQuit(ss, server, fd);
+    else if (command == "KICK") 
+        cmdKick(ss, server, fd);
+    else if (command == "INVITE") 
+        cmdInvite(ss, server, fd);
+    else if (command == "TOPIC") 
+        cmdTopic(ss, server, fd);
+    else if (command == "MODE") 
+        cmdMode(ss, server, fd);
     else
         server.sendMsgToClient(fd, "Invalid command\r\n");
 }
