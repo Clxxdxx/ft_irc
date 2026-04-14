@@ -53,6 +53,20 @@ void CommandDispatcher::cmdNick(std::istringstream &ss, Server &server, int fd)
     if (!client)
         return;
 
+    std::map<int, Client> &clients = server.getClients();
+    for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
+        if (it->second.getNickName() == nick) {
+            if (nick.empty())
+            {
+                server.sendMsgToClient(fd, "ERROR: empty nickname\r\n");
+                return;
+            }
+            
+            server.sendMsgToClient(fd, "ERROR: Nickname " + nick + " is already in use\r\n");
+            return;
+        }
+    }
+
     if (nick.empty())
     {
         server.sendMsgToClient(fd, "ERROR :No nickname\r\n");
@@ -247,6 +261,41 @@ void CommandDispatcher::cmdPrivmsg(std::istringstream &ss, Server &server, int f
     }
 }
 
+void CommandDispatcher::cmdPart(std::istringstream &ss, Server &server, int fd) {
+    string channelName;
+    string reason;
+    ss >> channelName;
+    std::getline(ss, reason); 
+
+    Client *client = server.getClient(fd);
+    Channel *chan = server.getChannel(channelName);
+
+    if (!chan) 
+        return server.sendMsgToClient(fd, "403 " + channelName + " :No such channel\r\n");
+    if (!chan->isClient(fd))
+        return server.sendMsgToClient(fd, "442 " + channelName + " :You're not on that channel\r\n");
+
+    if (!reason.empty() && reason[0] == ' ') reason.erase(0, 1);
+    if (!reason.empty() && reason[0] == ':') reason.erase(0, 1);
+
+    string prefix = ":" + client->getNickName() + "!" + client->getUserName() + "@localhost";
+    string msg = prefix + " PART " + channelName;
+    
+    if (!reason.empty()) {
+        msg += " :" + reason;
+    }
+    msg += "\r\n";
+    
+    std::vector<int> members = chan->getClients();
+    for (size_t i = 0; i < members.size(); i++)
+        server.sendMsgToClient(members[i], msg);
+
+    
+    cout << "Saliendo de " << channelName << endl;
+    chan->removeClient(fd);
+    client->leaveChannel(channelName);
+}
+
 void CommandDispatcher::cmdQuit(std::istringstream &ss, Server &server, int fd)
 {
     Client *client = server.getClient(fd);
@@ -294,7 +343,7 @@ void CommandDispatcher::cmdQuit(std::istringstream &ss, Server &server, int fd)
         }
     }
 
-    server.sendMsgToClient(fd, "ERROR :Closing Link: localhost (" + reason + ")\r\n");
+    //server.sendMsgToClient(fd, "ERROR :Closing Link: localhost (" + reason + ")\r\n");
     server.disconnectClient(fd);
 }
 
@@ -307,7 +356,7 @@ void CommandDispatcher::cmdKick(std::istringstream &ss, Server &server, int fd) 
     Channel *chan = server.getChannel(channelName);
 
     if (!chan) 
-        return server.sendMsgToClient(fd,  channelName + " :No such channel\r\n");
+        return server.sendMsgToClient(fd, channelName + " :No such channel\r\n");
     if (!chan->isClient(fd)) 
         return server.sendMsgToClient(fd, channelName + " :You're not on that channel\r\n");
     if (!chan->isOperator(fd)) 
@@ -325,7 +374,21 @@ void CommandDispatcher::cmdKick(std::istringstream &ss, Server &server, int fd) 
     if (targetFd == -1 || !chan->isClient(targetFd))
         return server.sendMsgToClient(fd, targetNick + " " + channelName + " :They aren't on that channel\r\n");
 
-    string msg = ":" + ref->getNickName() + " KICK " + channelName + " " + targetNick + " :" + (reason.empty() ? "Kicked" : reason) + "\r\n";
+    if (!reason.empty() && reason[0] == ' ')
+        reason.erase(0, 1);
+    if (!reason.empty() && reason[0] == ':')
+        reason.erase(0, 1);
+
+    string finalReason;
+    if (reason.empty()) {
+        finalReason = "Kicked by operator";
+    } else {
+        finalReason = reason;
+    }
+
+    string prefix = ":" + ref->getNickName() + "!" + ref->getUserName() + "@localhost";
+    string msg = prefix + " KICK " + channelName + " " + targetNick + " :" + finalReason + "\r\n";
+
     std::vector<int> members = chan->getClients();
     for (size_t i = 0; i < members.size(); i++)
         server.sendMsgToClient(members[i], msg);
@@ -433,13 +496,13 @@ void CommandDispatcher::cmdMode(std::istringstream &ss, Server &server, int fd) 
             chan->setInviteOnly(adding);
         else if (c == 't') 
             chan->setTopicRestricted(adding);
-        else if (c == 'k') 
-        {
-            ss >> param;
-            if (adding) 
-                chan->setPassword(param);
-            else 
+        else if (c == 'k') {
+            if (adding) {
+                if (ss >> param)
+                    chan->setPassword(param);
+            } else {
                 chan->setPassword("");
+            }
         }
         else if (c == 'l')
         {
@@ -489,6 +552,8 @@ void CommandDispatcher::executeCommand(Server &server, int fd, const string &mes
         cmdUser(ss, server, fd);
     else if (command == "JOIN")
         cmdJoin(ss, server, fd);
+    else if (command == "PART")
+        cmdPart(ss, server, fd);
     else if (command == "PRIVMSG")
         cmdPrivmsg(ss, server, fd);
     else if (command == "QUIT")

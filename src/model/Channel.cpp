@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Channel.cpp                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: ancarret <ancarret@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/03/09 14:54:15 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/10 18:38:45 by ancarret         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Channel.hpp"
 
 Channel::Channel(): _inviteOnly(false), _topicRestricted(false), _userLimit(0)
@@ -70,8 +58,6 @@ void Channel::setInviteOnly(bool value)
     _inviteOnly = value;
 }
 
-// --- Password (mode k) ---
-
 string Channel::getPassword() const
 {
     return _password;
@@ -86,8 +72,6 @@ bool Channel::hasPassword() const
 {
     return !_password.empty();
 }
-
-// --- Clientes ---
 
 void Channel::addClient(int fd)
 {
@@ -121,8 +105,6 @@ int Channel::getClientCount() const
     return static_cast<int>(_clients.size());
 }
 
-// --- Operadores (mode o) ---
-
 void Channel::addOperator(int fd)
 {
     if (!isOperator(fd))
@@ -150,8 +132,6 @@ bool Channel::isOperator(int fd) const
     }
     return false;
 }
-
-// --- Lista de invitados (mode i) ---
 
 void Channel::addInvite(int fd)
 {
@@ -181,8 +161,6 @@ bool Channel::isInvited(int fd) const
     return false;
 }
 
-// --- Modo t (topic restringido) ---
-
 bool Channel::isTopicRestricted() const
 {
     return _topicRestricted;
@@ -192,8 +170,6 @@ void Channel::setTopicRestricted(bool value)
 {
     _topicRestricted = value;
 }
-
-// --- Modo l (limite de usuarios) ---
 
 int Channel::getUserLimit() const
 {

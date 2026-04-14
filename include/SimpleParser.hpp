@@ -1,4 +1,3 @@
-// Parser IRC muy simple
 #pragma once
 
 #include <string>

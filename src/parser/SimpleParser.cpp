@@ -15,7 +15,7 @@ static string stripCRLF(const string &s)
         r.pop_back();
     return r;
 }
-// coge una línea completa y la parte en prefix/command/params/trailing
+//coge una línea completa y la parte en prefix/command/params/trailing
 SimpleParsedMessage SimpleParser::parseLine(const std::string &rawLine)
 {
     SimpleParsedMessage out;
@@ -23,10 +23,9 @@ SimpleParsedMessage SimpleParser::parseLine(const std::string &rawLine)
     size_t i = 0;
     size_t n = line.size();
 
-    // 1) si empieza por ':'
     if (i < n && line[i] == ':')
     {
-        i++; // saltar ':'
+        i++; //saltar ':'
         size_t start = i;
         while (i < n && line[i] != ' ')
             i++;
@@ -35,7 +34,7 @@ SimpleParsedMessage SimpleParser::parseLine(const std::string &rawLine)
             i++;
     }
 
-    // 2) siguiente token
+    //siguiente token
     if (i < n)
     {
         size_t start = i;
@@ -46,8 +45,7 @@ SimpleParsedMessage SimpleParser::parseLine(const std::string &rawLine)
             out.command[k] = static_cast<char>(std::toupper(static_cast<unsigned char>(out.command[k]))); //iasjfaf
     }
 
-    // 3) Params y trailing
-    // saltar espacios
+    //saltar espacios
     while (i < n && line[i] == ' ')
         i++;
 
@@ -55,11 +53,10 @@ SimpleParsedMessage SimpleParser::parseLine(const std::string &rawLine)
     {
         if (line[i] == ':')
         {
-            // trailing: el resto sin ':'
             out.trailing = line.substr(i + 1);
             break;
         }
-        // siguiente parámetro (sin espacios dentro)
+        //siguiente parámetro
         size_t start = i;
         while (i < n && line[i] != ' ')
             i++;

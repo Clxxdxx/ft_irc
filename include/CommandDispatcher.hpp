@@ -30,6 +30,7 @@ class CommandDispatcher
         void cmdJoin(std::istringstream &ss, Server &server, int fd);
         void cmdPrivmsg(std::istringstream &ss, Server &server, int fd);
         void cmdQuit(std::istringstream &ss, Server &server, int fd);
+        void cmdPart(std::istringstream &ss, Server &server, int fd);
 
         void cmdKick(std::istringstream &ss, Server &server, int fd);
         void cmdInvite(std::istringstream &ss, Server &server, int fd);

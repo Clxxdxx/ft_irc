@@ -1,6 +1,6 @@
 CXX = c++
 
-CPPFLAGS = -Wall -Wextra -Werror -std=c++98
+CPPFLAGS = -Wall -Wextra -Werror -std=c++98 
 INCLUDES = -Iinclude
 
 NAME = ircserv
