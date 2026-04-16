@@ -19,7 +19,7 @@ void CommandDispatcher::checkRegister(int fd, Client *client, Server &server)
 {
     if (client->tryRegister())
     {
-        server.sendMsgToClient(fd, "Welcome to the server irc\r\n");
+        server.sendMsgToClient(fd, ":localhost 001 " + client->getNickName() + ": Welcome to the server irc\r\n");
         cout << "Client " << client->getUserName() << " authenticated" << endl;
     }
 }
@@ -33,15 +33,21 @@ void CommandDispatcher::cmdPass(std::istringstream &ss, Server &server, int fd)
     if (!client)
         return;
 
+    if (client->isRegistered())
+    {
+        server.sendMsgToClient(fd, ":localhost 462 " + client->getNickName() + " :Unauthorized command, you already registered\r\n");
+        return;
+    }
+    
     if (password.empty())
-        server.sendMsgToClient(fd, "ERROR :Empty password\r\n");
+        server.sendMsgToClient(fd, ":localhost 461 :Empty password\r\n");
     else if (password == server.getPassword())
     {
         client->setHasProvidedPass(true);
         checkRegister(fd, client, server);
     }
     else
-        server.sendMsgToClient(fd, "ERROR :Password incorrect\r\n"); 
+        server.sendMsgToClient(fd, ":localhost 464 :Password incorrect\r\n"); 
 }
 
 void CommandDispatcher::cmdNick(std::istringstream &ss, Server &server, int fd)
@@ -53,25 +59,31 @@ void CommandDispatcher::cmdNick(std::istringstream &ss, Server &server, int fd)
     if (!client)
         return;
 
+    if (client->isRegistered())
+    {
+        server.sendMsgToClient(fd, ":localhost 462 " + client->getNickName() + " :Unauthorized command, you already registered\r\n");
+        return;
+    }
+
     std::map<int, Client> &clients = server.getClients();
     for (std::map<int, Client>::iterator it = clients.begin(); it != clients.end(); ++it) {
         if (it->second.getNickName() == nick) {
             if (nick.empty())
             {
-                server.sendMsgToClient(fd, "ERROR: empty nickname\r\n");
+                server.sendMsgToClient(fd, ":localhost 431: empty nickname\r\n");
                 return;
             }
             
-            server.sendMsgToClient(fd, "ERROR: Nickname " + nick + " is already in use\r\n");
+            server.sendMsgToClient(fd, ":localhost 433 : Nickname " + nick + " is already in use\r\n");
             return;
         }
     }
 
-    if (nick.empty())
+    /* if (nick.empty())
     {
         server.sendMsgToClient(fd, "ERROR :No nickname\r\n");
         return;
-    }
+    } */
 
     client->setNickName(nick);
     checkRegister(fd, client, server);
@@ -92,9 +104,15 @@ void CommandDispatcher::cmdUser(std::istringstream &ss, Server &server, int fd)
     if (!client)
         return;
 
+    if (client->isRegistered())
+    {
+        server.sendMsgToClient(fd, ":localhost 462 " + client->getNickName() + " :Unauthorized command, you already registered\r\n");
+        return;
+    }
+
     if (username.empty())
     {
-        server.sendMsgToClient(fd, "ERROR: No username\r\n");
+        server.sendMsgToClient(fd, ":localhost 461 :No username\r\n");
         return;
     }
 
@@ -291,7 +309,7 @@ void CommandDispatcher::cmdPart(std::istringstream &ss, Server &server, int fd) 
         server.sendMsgToClient(members[i], msg);
 
     
-    cout << "Saliendo de " << channelName << endl;
+    cout << "Exiting from " << channelName << endl;
     chan->removeClient(fd);
     client->leaveChannel(channelName);
 }
@@ -343,7 +361,6 @@ void CommandDispatcher::cmdQuit(std::istringstream &ss, Server &server, int fd)
         }
     }
 
-    //server.sendMsgToClient(fd, "ERROR :Closing Link: localhost (" + reason + ")\r\n");
     server.disconnectClient(fd);
 }
 
@@ -356,11 +373,14 @@ void CommandDispatcher::cmdKick(std::istringstream &ss, Server &server, int fd) 
     Channel *chan = server.getChannel(channelName);
 
     if (!chan) 
-        return server.sendMsgToClient(fd, channelName + " :No such channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 403" + targetNick + " " + channelName + " :No such channel\r\n");
     if (!chan->isClient(fd)) 
-        return server.sendMsgToClient(fd, channelName + " :You're not on that channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 442" + targetNick + " " + channelName + " :You're not on that channel\r\n");
     if (!chan->isOperator(fd)) 
-        return server.sendMsgToClient(fd, channelName + " :You're not channel operator\r\n");
+        return server.sendMsgToClient(fd, ":localhost 482 " + targetNick + " " + channelName + ":You're not channel operator\r\n");
+    if (targetNick.empty())
+        return server.sendMsgToClient(fd, ":localhost 461 :Empty nickname\r\n");
+    
 
     int targetFd = -1;
     std::map<int, Client> &clients = server.getClients();
@@ -372,7 +392,7 @@ void CommandDispatcher::cmdKick(std::istringstream &ss, Server &server, int fd) 
     }
 
     if (targetFd == -1 || !chan->isClient(targetFd))
-        return server.sendMsgToClient(fd, targetNick + " " + channelName + " :They aren't on that channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 442 " + targetNick + " " + channelName + " :They aren't on that channel\r\n");
 
     if (!reason.empty() && reason[0] == ' ')
         reason.erase(0, 1);
@@ -404,21 +424,21 @@ void CommandDispatcher::cmdTopic(std::istringstream &ss, Server &server, int fd)
 
     Channel *chan = server.getChannel(channelName);
     if (!chan) 
-        return server.sendMsgToClient(fd, "No such channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 403 " + channelName + " :No such channel\r\n");
     if (!chan->isClient(fd)) 
-        return server.sendMsgToClient(fd, "You're not on that channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 442 " + server.getClient(fd)->getNickName() + " :You're not on that channel\r\n");
 
     if (newTopic.empty()) 
     {
         if (chan->getTopic().empty()) 
-            server.sendMsgToClient(fd, channelName + " :No topic is set\r\n");
+            server.sendMsgToClient(fd, ":localhost 331 " + channelName + " :No topic is set\r\n");
         else 
             server.sendMsgToClient(fd, channelName + " :" + chan->getTopic() + "\r\n");
     } 
     else 
     {
         if (chan->isTopicRestricted() && !chan->isOperator(fd))
-            return server.sendMsgToClient(fd, channelName + " :You're not channel operator\r\n");
+            return server.sendMsgToClient(fd, ":localhost 482 " + server.getClient(fd)->getNickName() + " " + channelName + " :You're not channel operator\r\n");
         
         if (newTopic[0] == ' ') 
             newTopic.erase(0, 1);
@@ -441,11 +461,11 @@ void CommandDispatcher::cmdInvite(std::istringstream &ss, Server &server, int fd
     Channel *chan = server.getChannel(channelName);
 
     if (!chan) 
-        return server.sendMsgToClient(fd, channelName + " :No such channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 403 " + targetNick + " " + channelName + " :No such channel\r\n");
     if (!chan->isClient(fd)) 
-        return server.sendMsgToClient(fd, channelName + " :You're not on that channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 442 " + targetNick + " " + channelName + " :You're not on that channel\r\n");
     if (chan->isInviteOnly() && !chan->isOperator(fd))
-        return server.sendMsgToClient(fd, channelName + " :You're not channel operator\r\n");
+        return server.sendMsgToClient(fd, ":localhost 482 " + targetNick + " " + channelName + " :You're not channel operator\r\n");
 
     int targetFd = -1;
     std::map<int, Client> &clients = server.getClients();
@@ -459,9 +479,9 @@ void CommandDispatcher::cmdInvite(std::istringstream &ss, Server &server, int fd
     }
 
     if (targetFd == -1) 
-        return server.sendMsgToClient(fd, targetNick + " :No such nick\r\n");
+        return server.sendMsgToClient(fd, ":localhost 401 " + targetNick + " " + channelName +  " :No such nick\r\n");
     if (chan->isClient(targetFd)) 
-        return server.sendMsgToClient(fd, targetNick + " " + channelName + " :is already on channel\r\n");
+        return server.sendMsgToClient(fd, ":localhost 443 " + targetNick + " " + channelName + " :is already on channel\r\n");
 
     chan->addInvite(targetFd);
     server.sendMsgToClient(fd, inviter->getNickName() + " " + targetNick + " " + channelName + "\r\n");
@@ -474,9 +494,9 @@ void CommandDispatcher::cmdMode(std::istringstream &ss, Server &server, int fd) 
     
     Channel *chan = server.getChannel(target);
     if (!chan) 
-        return;
+        return server.sendMsgToClient(fd, ":localhost 403 " + target + " :No such channel\r\n");
     if (!chan->isOperator(fd)) 
-        return server.sendMsgToClient(fd, target + " :You're not channel operator\r\n");
+        return server.sendMsgToClient(fd, ":localhost 482 " + target + " " + server.getClient(fd)->getNickName() + " :You're not channel operator\r\n");
 
     bool adding = true;
     for (size_t i = 0; i < modes.length(); i++) {
@@ -508,7 +528,7 @@ void CommandDispatcher::cmdMode(std::istringstream &ss, Server &server, int fd) 
         {
             if (adding) 
             { 
-                ss >> param; 
+                ss >> param;    
                 chan->setUserLimit(std::atoi(param.c_str())); 
             }
             else 
@@ -530,6 +550,8 @@ void CommandDispatcher::cmdMode(std::istringstream &ss, Server &server, int fd) 
                     chan->removeOperator(targetFd);
             }
         }
+        else
+            return server.sendMsgToClient(fd, ":localhost 413 " + target + " " + server.getClient(fd)->getNickName() + " :Invalid operator\r\n");
     }
     string msg = ":" + server.getClient(fd)->getNickName() + " MODE " + target + " " + modes + "\r\n";
     std::vector<int> mems = chan->getClients();
@@ -567,5 +589,5 @@ void CommandDispatcher::executeCommand(Server &server, int fd, const string &mes
     else if (command == "MODE") 
         cmdMode(ss, server, fd);
     else
-        server.sendMsgToClient(fd, "Invalid command\r\n");
+        server.sendMsgToClient(fd, ":localhost 421 " + command + " :Invalid command\r\n");
 }

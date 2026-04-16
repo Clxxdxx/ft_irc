@@ -1,15 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   Server.cpp                                         :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: clalopez <clalopez@student.42madrid.com    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2026/02/26 14:41:15 by clalopez          #+#    #+#             */
-/*   Updated: 2026/03/13 15:28:55 by clalopez         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "Server.hpp"
 #include "Client.hpp"
 #include "Channel.hpp"
@@ -65,7 +53,7 @@ std::map<string, Channel> &Server::getChannels()
 
 void Server::handleMessage(int fd, const string &msg)
 {
-    cout << "Mensaje del [fd " << fd << "]: " << msg << endl;
+    cout << "Message from [fd " << fd << "]: " << msg << endl;
 
     CommandDispatcher dsp;
     dsp.executeCommand(*this, fd, msg);
@@ -91,7 +79,7 @@ void Server::acceptClient()
 
         //crear el cliente
         _clients[_clientFd] = Client(_clientFd);
-        cout << "Cliente conectado: fd " << _clientFd << endl; 
+        cout << "Client connected: fd " << _clientFd << endl; 
     }
 }
 
@@ -105,7 +93,11 @@ bool Server::recvMsg(size_t &i)
     if (bytes <= 0)
     {
         if (bytes == 0)
-            cout << "Cliente desconectado: fd " << fd << endl;
+            if (!this->getClient(fd)->getNickName().empty())
+                cout << "Client disconnected: " << this->getClient(fd)->getNickName() << endl;
+            else
+                cout << "Client disconnected: fd " << fd << endl;
+            
         else
            return true;
 
@@ -278,7 +270,7 @@ void Server::start()
     int bind_res = bind(_serverFd, (struct sockaddr*)&_server_addr, sizeof(_server_addr));
     if (bind_res < 0)
     {
-        std::cerr << "Error: Bind" << endl;
+        std::cerr << "Error: The port is already been used" << endl;
         exit(EXIT_FAILURE);
     }
 
@@ -290,7 +282,7 @@ void Server::start()
         exit(EXIT_FAILURE);
     }
 
-    cout << "Servidor iniciado en el puerto " << _port << endl;
+    cout << "Server started on port: " << _port << endl;
     connectionHandler();
 }
 

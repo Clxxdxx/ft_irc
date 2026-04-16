@@ -9,6 +9,7 @@ int main(int argc, char **argv)
 {
     std::signal(SIGQUIT, handleSignal);
     std::signal(SIGINT, handleSignal);
+    std::signal(SIGTSTP, handleSignal);
     std::signal(SIGPIPE, SIG_IGN);
     if (argc != 3)
     {
